@@ -4,18 +4,15 @@ import sys
 import numpy as np
 from collections import defaultdict
 
-
 def get_log_files(directory):
     """Returns a sorted list of log files in the directory."""
     files = [f for f in os.listdir(directory) if f.startswith("time_")]
     files.sort(key=lambda x: int(x.split('_')[-1]))  # Sort by numerical suffix
     return files
 
-
 def calculate_percentile(data, percentile):
     """Calculates the given percentile for a list of numbers."""
     return np.percentile(data, percentile) if data else 0
-
 
 def get_db_bench_pids():
     """Returns a set of PIDs running './db_bench'."""
@@ -38,6 +35,16 @@ def get_db_bench_pids():
 
     return pids
 
+def update_kernel_watermark_scale_factor(scale_factor):
+    if scale_factor <1 :
+        return
+    """Updates the kernel's watermark scale factor."""
+    try:
+        with open('/proc/sys/vm/watermark_scale_factor', 'w') as wsf:
+            wsf.write(str(scale_factor))
+        print(f"Kernel watermark scale factor updated to: {scale_factor}")
+    except PermissionError:
+        print("Permission denied: Unable to update kernel watermark scale factor. Run as root.")
 
 def process_logs(directory):
     watermark_scale_factor = 10  # Initial scale factor
@@ -88,8 +95,16 @@ def process_logs(directory):
         # Analyze churn and metrics per PID
         for pid in tracked_pids:
             current_pages = set(current_page_access_counts[pid].keys())
-            previous_pages = set(previous_page_access_counts[pid].keys())
+            previous_pages = set(previous_page_access_counts[pid].keys()) # for calculating new correctly
             new_pages = current_pages - previous_pages
+
+            # Filter previous pages to only include those with increased access counts
+            filtered_previous_pages = {
+                page: count for page, count in previous_page_access_counts[pid].items()
+                if page in current_pages and current_page_access_counts[pid][page] > count
+            }
+            
+            previous_pages = set(filtered_previous_pages.keys())
 
             churn = len(new_pages) / len(previous_pages) if previous_pages else 0
             print(f"PID {pid} - Churn: {churn:.2f}")
@@ -113,9 +128,15 @@ def process_logs(directory):
 
                     # Adjust watermark scale factor
                     if percentile_ratio > 1.2:
-                        watermark_scale_factor *= 2
+                        watermark_scale_factor *= 10/9
                     elif percentile_ratio < 0.8:
-                        watermark_scale_factor *= 0.5
+                        watermark_scale_factor *= 9/10
+
+                    # Ensure the scale factor is an integer (as required by the kernel)
+                    watermark_scale_factor = int(watermark_scale_factor)
+
+                    # Update the kernel with the new scale factor
+                    update_kernel_watermark_scale_factor(watermark_scale_factor)
 
                     print(f"PID {pid} - Updated Watermark Scale Factor: {watermark_scale_factor:.2f}")
 
@@ -124,7 +145,6 @@ def process_logs(directory):
         last_processed_file = current_file  # Update the last processed file
 
         time.sleep(0.5)  # Check for new files every 0.5 seconds
-
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
