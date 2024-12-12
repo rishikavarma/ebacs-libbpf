@@ -2,3 +2,8 @@
 /examples/c/build
 /examples/c/.xmake
 /.idea
+/examples/c/lru_metrics_*
+/examples/c/myenv
+/examples/c/test_files
+/examples/c/vm_files/perf.data
+/examples/c/vm_files/testfile*

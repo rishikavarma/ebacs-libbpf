@@ -70,7 +70,7 @@ def process_logs(directory, log_file):
 
         free_pages = 0.03*free_pages
         used_memory_ratio = 1 - (free_pages / total_pages)
-        print(f"Used Memory Ratio: {used_memory_ratio:.2f}")
+        # print(f"Used Memory Ratio: {used_memory_ratio:.2f}")
 
         if used_memory_ratio > 0.95:
             utilization_above_threshold = used_memory_ratio - 0.95
@@ -78,19 +78,23 @@ def process_logs(directory, log_file):
         else:
             max_scale_factor = 10  # Minimal scale factor when memory usage is under 95%
 
-        print(f"Max Scale Factor: {max_scale_factor}")
+        # print(f"Max Scale Factor: {max_scale_factor}")
 
         bucket_thresholds = calculate_dynamic_buckets(max_scale_factor)
 
         log_files = [f for f in os.listdir(directory) if f.startswith("time_")]
         log_files.sort(key=lambda x: int(x.split('_')[-1]))
-
+        
         if len(log_files) < 2:
             time.sleep(0.5)
             continue
 
         current_file = os.path.join(directory, log_files[-2])
-        print(f"Processing file: {current_file}")
+        # print(f"Processing file: {current_file}")
+
+        if "time_60" in current_file:
+            print("Stopping as 'time_60' log file is reached.")
+            return
 
         access_counts = []
         with open(current_file, 'r') as f:
@@ -123,7 +127,7 @@ def process_logs(directory, log_file):
 
         working_set_split = (split_index + 1) / len(access_counts)
         working_set_split = 1 - working_set_split
-        print(f"Working Set Split: {working_set_split:.2f}")
+        # print(f"Working Set Split: {working_set_split:.2f}")
 
 
         for i, threshold in enumerate(bucket_thresholds):
@@ -156,7 +160,7 @@ if __name__ == "__main__":
     wm_log_file = os.path.join(os.path.dirname(__file__), "watermark_scale_factor.log")
 
     with open(wm_log_file, 'w') as log:
-        log.write("Time, Watermark_scale Factor\n")
+        log.write("Time, Watermark_scale_factor\n")
 
     # Start processing logs
     process_logs(log_directory, wm_log_file)

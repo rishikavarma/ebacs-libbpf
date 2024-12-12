@@ -1,0 +1,14 @@
+[global]
+ioengine=libaio          # Asynchronous I/O engine
+direct=0                 # Use buffered I/O
+bs=4k                    # Block size
+size=500M                  # File size
+runtime=10               # Test runtime in seconds
+time_based=1             # Ensure runtime is honored
+filename=testfile3          # File used for testing
+group_reporting=1        # Consolidated output for threads
+rw=randrw                # Random read/write mix
+rwmixread=50             # 50% reads, 50% writes
+
+[memory_pressure_test]
+numjobs=32               # 16 worker threads/processes

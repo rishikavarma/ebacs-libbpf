@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 
 # Function to read access counts from a file
 def read_access_counts(file_path):
@@ -8,39 +9,80 @@ def read_access_counts(file_path):
     return [int(line.split()[2]) for line in lines]
 
 # Function to calculate and plot the graph
-def plot_80_20_graph(access_counts, name):
-    # Sort access counts and their original indexes
-    sorted_counts = sorted(enumerate(access_counts), key=lambda x: x[1], reverse=True)
-    indexes, sorted_counts = zip(*sorted_counts)
-    
-    # Calculate cumulative distribution
-    total_access = sum(sorted_counts)
-    cumulative_access = np.cumsum(sorted_counts)
-    cumulative_percentage = cumulative_access / total_access * 100
-    
-    # Find the threshold index for 80% access
-    # threshold_index = next(i for i, percent in enumerate(cumulative_percentage) if percent >= 80)
-    # threshold_percentage_indexes = (threshold_index + 1) / len(access_counts) * 100
+import numpy as np
+import matplotlib.pyplot as plt
 
-    # Plot
-    plt.figure(figsize=(12, 6))
-    plt.plot(range(len(sorted_counts)), cumulative_access, label="Cumulative Access Percentage", color="blue")
-    # plt.axhline(y=80, color="red", linestyle="--", label="80% Access")
-    # plt.axvline(x=threshold_index, color="green", linestyle="--", label=f"20% Indexes ({threshold_percentage_indexes:.1f}%)")
-    plt.title("CDF of access counts")
-    plt.xlabel("Indexes (Sorted by Access Counts)")
-    plt.ylabel("CDF")
+def plot_cdf(data, name, title="Cumulative Distribution Function (CDF)", xlabel="Data Values", ylabel="Cumulative Probability"):
+    """
+    Plots the Cumulative Distribution Function (CDF) of the given data.
+    
+    Parameters:
+    - data: array-like, the dataset to compute the CDF for
+    - title: str, title of the plot (default: "Cumulative Distribution Function (CDF)")
+    - xlabel: str, label for the x-axis (default: "Data Values")
+    - ylabel: str, label for the y-axis (default: "Cumulative Probability")
+    """
+    # Sort the data
+    sorted_data = np.sort(data)
+
+    # Calculate the cumulative probabilities
+    cumulative_prob = np.arange(1, len(sorted_data) + 1) / len(sorted_data)
+
+    # Plot the CDF
+    plt.figure(figsize=(8, 5))
+    plt.plot(sorted_data, cumulative_prob, linestyle='-.', linewidth=2, label='CDF')
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.grid()
     plt.legend()
-    plt.grid(axis="both", linestyle="--", alpha=0.7)
     plt.savefig(name)
+
+# Example usage
+# data = np.random.randn(1000)  # Replace with your dataset
+# plot_cdf(data)
+
+def plot_kde(data, name, title="Page Access Count Density", threshold_percent = 0.9):
+    
+    max_value = max(data)
+    threshold = threshold_percent * max_value
+    
+    # Filter data to include only values within threshold
+    adjusted_data = [x for x in data if x <= threshold]
+    # data = adjusted_data
+    
+    # Create the plot
+    plt.figure(figsize=(10, 6))
+    sns.kdeplot(data=data, shade=True, color='blue', linewidth=2)
+    
+    # Customize the plot
+    plt.xlabel('Page Access Counts')
+    plt.ylabel('Density')
+    plt.title(title)
+    plt.grid(True)
+    
+    # Show the plot
+    plt.savefig(name)
+
+# For a combined histogram and KDE plot, use this alternative function:
+def plot_hist_kde(data, name):
+    
+    plt.figure(figsize=(10, 6))
+    sns.histplot(data=data, kde=True, stat='density')
+    plt.xlabel('Data Values')
+    plt.ylabel('Density')
+    plt.title('Distribution with Density Curve')
+    plt.grid(True)
+    plt.savefig(name)
+
 
 # Main script
 if __name__ == "__main__":
     # Replace 'data.txt' with the path to your file
     file_path = './../lru_metrics_ran/time_128'
     access_counts = read_access_counts(file_path)
-    plot_80_20_graph(access_counts, "ran_cdf.png")
+    plot_kde(access_counts, "ran_cdf.png", title = "Page Access Count Density(Uniform)")
     
     file_path = './../lru_metrics_hs/time_128'
     access_counts = read_access_counts(file_path)
-    plot_80_20_graph(access_counts, "hs_cdf.png")
+    plot_kde(access_counts, "hs_cdf.png", title = "Page Access Count Density(Hotspots)")
